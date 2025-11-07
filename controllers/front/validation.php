@@ -60,42 +60,6 @@ class Ps_WirepaymentValidationModuleFrontController extends ModuleFrontControlle
             '{bankwire_address}' => nl2br(Configuration::get('BANK_WIRE_ADDRESS') ?: ''),
         ];
 
-        $isAjax = (bool) Tools::getValue('ajax');
-
-        if ($isAjax) {
-            $requestKey = Tools::getValue('key');
-            if ($requestKey && $requestKey !== $customer->secure_key) {
-                header('Content-Type: application/json');
-                $this->ajaxDie(Tools::jsonEncode([
-                    'success' => false,
-                    'message' => $this->module->getTranslator()->trans('Invalid order confirmation key.', [], 'Modules.Wirepayment.Shop'),
-                ]));
-            }
- 
-            $response = ['success' => false];
-
-            try {
-                $orderId = Order::getOrderByCartId((int) $cart->id);
-                if ($orderId) {
-                    $order = new Order($orderId);
-                    $redirectUrl = 'index.php?controller=order-confirmation&id_cart=' . $cart->id . '&id_module=' . (int) $this->module->id . '&id_order=' . (int) $order->id . '&key=' . $customer->secure_key;
-                } else {
-                    $this->module->validateOrder($cart->id, (int) Configuration::get('PS_OS_BANKWIRE'), $total, $this->module->displayName, null, $mailVars, (int) $currency->id, false, $customer->secure_key);
-                    $redirectUrl = 'index.php?controller=order-confirmation&id_cart=' . $cart->id . '&id_module=' . (int) $this->module->id . '&id_order=' . (int) $this->module->currentOrder . '&key=' . $customer->secure_key;
-                }
-
-                $response = [
-                    'success' => true,
-                    'redirectUrl' => $redirectUrl,
-                ];
-            } catch (PrestaShopException $exception) {
-                $response['message'] = $exception->getMessage();
-            }
-
-            header('Content-Type: application/json');
-            $this->ajaxDie(Tools::jsonEncode($response));
-        }
-
         $this->module->validateOrder($cart->id, (int) Configuration::get('PS_OS_BANKWIRE'), $total, $this->module->displayName, null, $mailVars, (int) $currency->id, false, $customer->secure_key);
         Tools::redirect('index.php?controller=order-confirmation&id_cart=' . $cart->id . '&id_module=' . $this->module->id . '&id_order=' . $this->module->currentOrder . '&key=' . $customer->secure_key);
     }
